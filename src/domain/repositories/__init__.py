@@ -1,0 +1,1 @@
+"""Domain repositories - Abstract interfaces for data access."""

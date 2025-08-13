@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Server Management - LangGraph</title>
+    <link rel="stylesheet" href="/static/management.css?v={{ version }}">
+    <meta name="description" content="Manage Model Context Protocol servers and dynamic tool discovery">
+</head>
+<body>
+    <!-- Skip Link for Accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <div class="management-container">
+        <!-- Header Section -->
+        <header class="management-header" role="banner">
+            <div class="header-content">
+                <div class="header-text">
+                    <h1>🔧 MCP Server Management</h1>
+                    <p>Manage Model Context Protocol servers and discover dynamic tools for your intelligent agents.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-success" onclick="showAddServerModal()" aria-label="Add new MCP server">
+                        <span aria-hidden="true">➕</span> Add New Server
+                    </button>
+                    <a href="/" class="btn btn-secondary" aria-label="Return to chat interface">
+                        <span aria-hidden="true">💬</span> Back to Chat
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Breadcrumb Navigation -->
+        <nav class="breadcrumb" aria-label="Breadcrumb navigation">
+            <a href="/" aria-label="Home">Home</a>
+            <span class="breadcrumb-separator" aria-hidden="true">/</span>
+            <span aria-current="page">MCP Management</span>
+        </nav>
+
+        <!-- Action Bar -->
+        <div class="action-bar">
+            <div class="action-group">
+                <div class="search-container">
+                    <input type="text" 
+                           id="server-search" 
+                           class="search-input" 
+                           placeholder="Search servers by name or type..."
+                           aria-label="Search MCP servers">
+                    <span class="search-icon" aria-hidden="true">🔍</span>
+                </div>
+                <select id="filter-type" class="form-select" aria-label="Filter by server type">
+                    <option value="">All Types</option>
+                    <option value="internal">Internal</option>
+                    <option value="external">External</option>
+                </select>
+                <select id="filter-status" class="form-select" aria-label="Filter by status">
+                    <option value="">All Status</option>
+                    <option value="active">Active Only</option>
+                    <option value="inactive">Inactive Only</option>
+                </select>
+            </div>
+            <div class="action-group">
+                <button class="btn btn-primary" onclick="refreshData()" aria-label="Refresh server data">
+                    <span aria-hidden="true">🔄</span> Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Notification Area -->
+        <div id="notification-area" role="alert" aria-live="polite" aria-atomic="true"></div>
+
+        <!-- Main Content -->
+        <main id="main-content" class="content-area" role="main">
+            <!-- System Statistics -->
+            <section class="status-grid" id="mcp-stats" aria-labelledby="stats-heading">
+                <h2 id="stats-heading" class="sr-only">MCP Server Statistics</h2>
+                <!-- Stats cards will be populated here -->
+                <div class="status-card">
+                    <div class="loading-skeleton" style="height: 60px; margin-bottom: 8px;"></div>
+                    <div class="loading-skeleton" style="height: 16px;"></div>
+                </div>
+                <div class="status-card">
+                    <div class="loading-skeleton" style="height: 60px; margin-bottom: 8px;"></div>
+                    <div class="loading-skeleton" style="height: 16px;"></div>
+                </div>
+                <div class="status-card">
+                    <div class="loading-skeleton" style="height: 60px; margin-bottom: 8px;"></div>
+                    <div class="loading-skeleton" style="height: 16px;"></div>
+                </div>
+                <div class="status-card">
+                    <div class="loading-skeleton" style="height: 60px; margin-bottom: 8px;"></div>
+                    <div class="loading-skeleton" style="height: 16px;"></div>
+                </div>
+            </section>
+
+            <!-- Servers Section -->
+            <section aria-labelledby="servers-heading">
+                <h2 id="servers-heading" class="sr-only">MCP Server Configurations</h2>
+                <div class="cards-grid" id="servers-grid" role="grid" aria-label="MCP server cards">
+                    <!-- Loading skeletons -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="loading-skeleton" style="height: 24px; width: 200px; margin-bottom: 8px;"></div>
+                                <div class="loading-skeleton" style="height: 16px; width: 100px;"></div>
+                            </div>
+                            <div class="loading-skeleton" style="height: 24px; width: 80px;"></div>
+                        </div>
+                        <div class="card-content">
+                            <div class="loading-skeleton" style="height: 80px; margin-bottom: 16px;"></div>
+                        </div>
+                        <div class="card-actions">
+                            <div class="loading-skeleton" style="height: 36px; width: 80px;"></div>
+                            <div class="loading-skeleton" style="height: 36px; width: 100px;"></div>
+                            <div class="loading-skeleton" style="height: 36px; width: 60px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Add Server Modal -->
+    <div id="addServerModal" class="modal" role="dialog" aria-labelledby="add-server-title" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="add-server-title">Add New MCP Server</h2>
+                <button class="modal-close" onclick="closeAddServerModal()" aria-label="Close dialog">×</button>
+            </div>
+            
+            <form id="addServerForm" novalidate>
+                <div class="form-group">
+                    <label for="serverName" class="form-label required">Server Name</label>
+                    <input type="text" 
+                           id="serverName" 
+                           name="name" 
+                           class="form-input" 
+                           required
+                           aria-describedby="name-help name-error"
+                           placeholder="e.g., Math Tools Server">
+                    <div id="name-help" class="form-help">Choose a descriptive name for your MCP server</div>
+                    <div id="name-error" class="form-error" role="alert"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="serverType" class="form-label required">Server Type</label>
+                    <select id="serverType" 
+                            name="server_type" 
+                            class="form-select" 
+                            required
+                            aria-describedby="type-help type-error">
+                        <option value="">Select server type...</option>
+                        <option value="internal">Internal (Local Scripts)</option>
+                        <option value="external">External (HTTP/WebSocket)</option>
+                    </select>
+                    <div id="type-help" class="form-help">Internal servers run locally, external servers connect via network</div>
+                    <div id="type-error" class="form-error" role="alert"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="serverConfig" class="form-label required">Configuration (JSON)</label>
+                    <textarea id="serverConfig" 
+                              name="config" 
+                              class="form-textarea" 
+                              required
+                              aria-describedby="config-help config-error"
+                              placeholder='{"command": "python", "args": ["server.py"], "transport": "stdio"}'
+                              rows="8"></textarea>
+                    <div id="config-help" class="form-help">
+                        <strong>Examples:</strong><br>
+                        <strong>Internal:</strong> {"command": "python", "args": ["mcp_server.py"], "transport": "stdio"}<br>
+                        <strong>External:</strong> {"url": "http://localhost:8000/mcp", "transport": "http"}
+                    </div>
+                    <div id="config-error" class="form-error" role="alert"></div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddServerModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="add-server-btn">
+                        <span id="add-server-text">Add Server</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Tools Modal -->
+    <div id="toolsModal" class="modal" role="dialog" aria-labelledby="tools-title" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="tools-title">Discovered Tools</h2>
+                <button class="modal-close" onclick="closeToolsModal()" aria-label="Close dialog">×</button>
+            </div>
+            
+            <div id="toolsList" class="tool-list" role="list" aria-label="Available tools">
+                <!-- Tools will be loaded here -->
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeToolsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal" role="dialog" aria-labelledby="confirm-title" aria-hidden="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="confirm-title">Confirm Action</h2>
+                <button class="modal-close" onclick="closeConfirmModal()" aria-label="Close dialog">×</button>
+            </div>
+            <div id="confirm-message"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+                <button id="confirm-action" class="btn btn-danger">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Global state
+    let servers = [];
+    let filteredServers = [];
+    let mcpStats = {};
+    
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        setupEventListeners();
+        loadInitialData();
+    });
+    
+    // Setup event listeners
+    function setupEventListeners() {
+        // Search and filter
+        document.getElementById('server-search').addEventListener('input', debounce(filterServers, 300));
+        document.getElementById('filter-type').addEventListener('change', filterServers);
+        document.getElementById('filter-status').addEventListener('change', filterServers);
+        
+        // Form submission
+        document.getElementById('addServerForm').addEventListener('submit', handleAddServer);
+        document.getElementById('addServerForm').addEventListener('input', clearFieldErrors);
+        
+        // Modal events
+        document.addEventListener('keydown', handleKeyDown);
+        
+        // Click outside modals to close
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeAllModals();
+                }
+            });
+        });
+    }
+    
+    // Handle keyboard navigation
+    function handleKeyDown(e) {
+        if (e.key === 'Escape') {
+            closeAllModals();
+        }
+    }
+    
+    // Debounce utility
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+    
+    // Clear field errors on input
+    function clearFieldErrors(e) {
+        if (e.target.classList.contains('error')) {
+            e.target.classList.remove('error');
+            const errorId = e.target.getAttribute('aria-describedby')?.split(' ').find(id => id.endsWith('-error'));
+            if (errorId) {
+                document.getElementById(errorId).textContent = '';
+            }
+        }
+    }
+    
+    // Load initial data
+    async function loadInitialData() {
+        try {
+            await Promise.all([
+                loadStats(),
+                loadServers()
+            ]);
+        } catch (error) {
+            showNotification('Failed to load initial data', 'error');
+            console.error('Error loading initial data:', error);
+        }
+    }
+    
+    // Load MCP stats
+    async function loadStats() {
+        try {
+            const response = await fetch('/api/mcp-servers-summary');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            mcpStats = await response.json();
+            renderStats();
+        } catch (error) {
+            console.error('Error loading stats:', error);
+            document.getElementById('mcp-stats').innerHTML = `
+                <div class="status-card">
+                    <div class="form-error">
+                        <span aria-hidden="true">⚠️</span>
+                        Failed to load server statistics
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Load MCP servers
+    async function loadServers() {
+        try {
+            const response = await fetch('/api/mcp-servers');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            servers = await response.json();
+            filteredServers = [...servers];
+            renderServers();
+        } catch (error) {
+            console.error('Error loading servers:', error);
+            document.getElementById('servers-grid').innerHTML = `
+                <div class="card">
+                    <div class="card-content">
+                        <div class="form-error">
+                            <span aria-hidden="true">⚠️</span>
+                            Failed to load servers: ${error.message}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Render statistics
+    function renderStats() {
+        const statsDiv = document.getElementById('mcp-stats');
+        
+        statsDiv.innerHTML = `
+            <div class="status-card">
+                <h4>Total Servers</h4>
+                <div class="status-value">${mcpStats.total || 0}</div>
+                <div class="status-trend">Configured servers</div>
+            </div>
+            <div class="status-card">
+                <h4>Active Servers</h4>
+                <div class="status-value">${mcpStats.active || 0}</div>
+                <div class="status-trend">Currently running</div>
+            </div>
+            <div class="status-card">
+                <h4>Internal Servers</h4>
+                <div class="status-value">${mcpStats.internal || 0}</div>
+                <div class="status-trend">Local scripts</div>
+            </div>
+            <div class="status-card">
+                <h4>External Servers</h4>
+                <div class="status-value">${mcpStats.external || 0}</div>
+                <div class="status-trend">Network connections</div>
+            </div>
+        `;
+    }
+    
+    // Render servers grid
+    function renderServers() {
+        const grid = document.getElementById('servers-grid');
+        
+        if (filteredServers.length === 0) {
+            grid.innerHTML = `
+                <div class="card">
+                    <div class="card-content">
+                        <h3>No servers found</h3>
+                        <p>No MCP servers match your current filters. Try adjusting your search criteria or add a new server to get started.</p>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn btn-success" onclick="showAddServerModal()">Add New Server</button>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        grid.innerHTML = filteredServers.map(server => `
+            <div class="card" role="gridcell" tabindex="0" aria-labelledby="server-${server.id}-title">
+                <div class="card-header">
+                    <div class="card-title">
+                        <h3 id="server-${server.id}-title">${escapeHtml(server.name)}</h3>
+                        <div class="status-indicator ${server.is_active ? 'status-active' : 'status-inactive'}">
+                            <span class="status-dot" aria-hidden="true"></span>
+                            <span>${server.is_active ? 'Active' : 'Inactive'}</span>
+                        </div>
+                    </div>
+                    <div class="badge badge-${server.server_type === 'internal' ? 'success' : 'primary'}">
+                        ${escapeHtml(server.server_type)}
+                    </div>
+                </div>
+                
+                <div class="card-content">
+                    <div class="form-group">
+                        <div class="form-label">Configuration</div>
+                        <div class="server-config">
+                            <pre><code>${escapeHtml(JSON.stringify(server.config, null, 2))}</code></pre>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-actions">
+                    <button class="btn btn-primary btn-sm" 
+                            onclick="testConnection('${server.id}', '${escapeHtml(server.name)}')"
+                            aria-label="Test connection to ${escapeHtml(server.name)}">
+                        <span aria-hidden="true">🔌</span> Test
+                    </button>
+                    <button class="btn btn-success btn-sm" 
+                            onclick="discoverTools('${server.id}', '${escapeHtml(server.name)}')"
+                            aria-label="Discover tools from ${escapeHtml(server.name)}">
+                        <span aria-hidden="true">🔍</span> Discover
+                    </button>
+                    <button class="btn ${server.is_active ? 'btn-warning' : 'btn-success'} btn-sm" 
+                            onclick="toggleServer('${server.id}', ${!server.is_active}, '${escapeHtml(server.name)}')"
+                            aria-label="${server.is_active ? 'Deactivate' : 'Activate'} ${escapeHtml(server.name)}">
+                        <span aria-hidden="true">${server.is_active ? '⏸️' : '▶️'}</span>
+                        ${server.is_active ? 'Deactivate' : 'Activate'}
+                    </button>
+                    <button class="btn btn-danger btn-sm" 
+                            onclick="confirmDeleteServer('${server.id}', '${escapeHtml(server.name)}')"
+                            aria-label="Delete ${escapeHtml(server.name)}">
+                        <span aria-hidden="true">🗑️</span> Delete
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Filter servers
+    function filterServers() {
+        const searchTerm = document.getElementById('server-search').value.toLowerCase();
+        const typeFilter = document.getElementById('filter-type').value;
+        const statusFilter = document.getElementById('filter-status').value;
+        
+        filteredServers = servers.filter(server => {
+            const matchesSearch = server.name.toLowerCase().includes(searchTerm) ||
+                                server.server_type.toLowerCase().includes(searchTerm);
+            
+            const matchesType = !typeFilter || server.server_type === typeFilter;
+            
+            const matchesStatus = !statusFilter || 
+                                (statusFilter === 'active' && server.is_active) ||
+                                (statusFilter === 'inactive' && !server.is_active);
+            
+            return matchesSearch && matchesType && matchesStatus;
+        });
+        
+        renderServers();
+    }
+    
+    // Refresh data
+    async function refreshData() {
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        
+        btn.classList.add('btn-loading');
+        btn.disabled = true;
+        
+        try {
+            await loadInitialData();
+            showNotification('Data refreshed successfully!');
+        } catch (error) {
+            showNotification('Failed to refresh data', 'error');
+        } finally {
+            btn.classList.remove('btn-loading');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+    
+    // Test connection to server
+    async function testConnection(serverId, serverName) {
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        
+        btn.classList.add('btn-loading');
+        btn.disabled = true;
+        
+        try {
+            const response = await fetch(`/api/mcp-servers/${serverId}/test`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification(`Connection to "${serverName}" successful! Found ${result.tool_count || 0} tools.`);
+            } else {
+                showNotification(`Connection to "${serverName}" failed: ${result.message}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error testing connection:', error);
+            showNotification(`Error testing connection to "${serverName}": ${error.message}`, 'error');
+        } finally {
+            btn.classList.remove('btn-loading');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+    
+    // Discover tools from server
+    async function discoverTools(serverId, serverName) {
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        
+        btn.classList.add('btn-loading');
+        btn.disabled = true;
+        
+        try {
+            const response = await fetch(`/api/mcp-servers/${serverId}/discover`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            
+            const toolsList = document.getElementById('toolsList');
+            toolsList.innerHTML = '';
+            
+            if (result.tools && result.tools.length > 0) {
+                result.tools.forEach(tool => {
+                    const toolItem = document.createElement('div');
+                    toolItem.className = 'tool-item';
+                    toolItem.innerHTML = `
+                        <div class="tool-name">${escapeHtml(tool.name)}</div>
+                        <div class="tool-description">${escapeHtml(tool.description || 'No description available')}</div>
+                    `;
+                    toolsList.appendChild(toolItem);
+                });
+                
+                document.getElementById('tools-title').textContent = `Tools from ${serverName} (${result.tools.length})`;
+            } else {
+                toolsList.innerHTML = '<div class="form-help">No tools discovered from this server</div>';
+                document.getElementById('tools-title').textContent = `Tools from ${serverName}`;
+            }
+            
+            showModal('toolsModal');
+        } catch (error) {
+            console.error('Error discovering tools:', error);
+            showNotification(`Error discovering tools from "${serverName}": ${error.message}`, 'error');
+        } finally {
+            btn.classList.remove('btn-loading');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+    
+    // Toggle server active status
+    async function toggleServer(serverId, activate, serverName) {
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        
+        btn.classList.add('btn-loading');
+        btn.disabled = true;
+        
+        const action = activate ? 'activate' : 'deactivate';
+        
+        try {
+            const response = await fetch(`/api/mcp-servers/${serverId}/${action}`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            showNotification(`Server "${serverName}" ${activate ? 'activated' : 'deactivated'} successfully!`);
+            await refreshData();
+        } catch (error) {
+            console.error(`Error ${action}ing server:`, error);
+            showNotification(`Failed to ${action} server "${serverName}": ${error.message}`, 'error');
+        } finally {
+            btn.classList.remove('btn-loading');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+    
+    // Confirm delete server
+    function confirmDeleteServer(serverId, serverName) {
+        document.getElementById('confirm-title').textContent = 'Delete MCP Server';
+        document.getElementById('confirm-message').innerHTML = `
+            <p>Are you sure you want to delete the MCP server <strong>"${escapeHtml(serverName)}"</strong>?</p>
+            <p class="form-error">⚠️ This action cannot be undone and will permanently remove the server configuration.</p>
+        `;
+        
+        const confirmBtn = document.getElementById('confirm-action');
+        confirmBtn.textContent = 'Delete Server';
+        confirmBtn.onclick = () => deleteServer(serverId, serverName);
+        
+        showModal('confirmModal');
+    }
+    
+    // Delete server
+    async function deleteServer(serverId, serverName) {
+        const btn = document.getElementById('confirm-action');
+        const originalText = btn.textContent;
+        
+        btn.classList.add('btn-loading');
+        btn.disabled = true;
+        
+        try {
+            const response = await fetch(`/api/mcp-servers/${serverId}`, {
+                method: 'DELETE'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            showNotification(`Server "${serverName}" deleted successfully!`);
+            closeConfirmModal();
+            
+            // Remove deleted server from local state immediately
+            servers = servers.filter(server => server.id !== serverId);
+            filteredServers = filteredServers.filter(server => server.id !== serverId);
+            
+            // Re-render the servers grid with updated data
+            try {
+                renderServers();
+            } catch (renderError) {
+                console.warn('Error re-rendering servers after deletion:', renderError);
+                // Fallback: reload all data if render fails
+                await refreshData();
+            }
+            
+            // Load statistics separately to avoid errors with missing server
+            try {
+                await loadStats();
+            } catch (statsError) {
+                console.warn('Failed to refresh statistics after deletion:', statsError);
+                // Don't show error to user as the deletion was successful
+            }
+        } catch (error) {
+            console.error('Error deleting server:', error);
+            showNotification(`Failed to delete server "${serverName}": ${error.message}`, 'error');
+        } finally {
+            btn.classList.remove('btn-loading');
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
+    
+    // Handle add server form submission
+    async function handleAddServer(e) {
+        e.preventDefault();
+        
+        // Clear previous errors
+        clearAllErrors();
+        
+        // Get form data
+        const formData = new FormData(e.target);
+        let config;
+        
+        try {
+            config = JSON.parse(formData.get('config'));
+        } catch (error) {
+            showFieldError('serverConfig', 'config-error', 'Invalid JSON configuration');
+            return;
+        }
+        
+        const data = {
+            name: formData.get('name').trim(),
+            server_type: formData.get('server_type'),
+            config: config
+        };
+        
+        // Validate form
+        if (!validateAddServerForm(data)) {
+            return;
+        }
+        
+        const submitBtn = document.getElementById('add-server-btn');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.classList.add('btn-loading');
+        submitBtn.disabled = true;
+        
+        try {
+            const response = await fetch('/api/mcp-servers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to add server');
+            }
+            
+            const result = await response.json();
+            showNotification(`Server "${data.name}" added successfully!`);
+            closeAddServerModal();
+            
+            // Add new server to local state immediately
+            servers.push(result);
+            filteredServers.push(result);
+            
+            // Re-render the servers grid with updated data
+            renderServers();
+            
+            // Load statistics separately to avoid errors with new server
+            try {
+                await loadStats();
+            } catch (statsError) {
+                console.warn('Failed to refresh statistics after creation:', statsError);
+                // Don't show error to user as the creation was successful
+            }
+        } catch (error) {
+            console.error('Error adding server:', error);
+            showNotification('Failed to add server: ' + error.message, 'error');
+        } finally {
+            submitBtn.classList.remove('btn-loading');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    }
+    
+    // Validate add server form
+    function validateAddServerForm(data) {
+        let hasErrors = false;
+        
+        if (!data.name) {
+            showFieldError('serverName', 'name-error', 'Server name is required');
+            hasErrors = true;
+        }
+        
+        if (!data.server_type) {
+            showFieldError('serverType', 'type-error', 'Server type is required');
+            hasErrors = true;
+        }
+        
+        if (!data.config || typeof data.config !== 'object') {
+            showFieldError('serverConfig', 'config-error', 'Valid JSON configuration is required');
+            hasErrors = true;
+        }
+        
+        if (hasErrors) {
+            // Focus first error field
+            const firstError = document.querySelector('.form-input.error, .form-select.error, .form-textarea.error');
+            if (firstError) {
+                firstError.focus();
+            }
+        }
+        
+        return !hasErrors;
+    }
+    
+    // Show field error
+    function showFieldError(fieldId, errorId, message) {
+        const field = document.getElementById(fieldId);
+        const errorElement = document.getElementById(errorId);
+        
+        field.classList.add('error');
+        errorElement.textContent = message;
+    }
+    
+    // Clear all errors
+    function clearAllErrors() {
+        document.querySelectorAll('.form-input, .form-select, .form-textarea').forEach(el => {
+            el.classList.remove('error');
+        });
+        document.querySelectorAll('.form-error').forEach(el => {
+            el.textContent = '';
+        });
+    }
+    
+    // Modal utilities
+    function showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden', 'false');
+        
+        // Focus the first focusable element
+        const focusable = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusable) focusable.focus();
+    }
+    
+    function showAddServerModal() {
+        showModal('addServerModal');
+    }
+    
+    function closeAddServerModal() {
+        const modal = document.getElementById('addServerModal');
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+        document.getElementById('addServerForm').reset();
+        clearAllErrors();
+    }
+    
+    function closeToolsModal() {
+        const modal = document.getElementById('toolsModal');
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+    
+    function closeConfirmModal() {
+        const modal = document.getElementById('confirmModal');
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+    
+    function closeAllModals() {
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.classList.remove('active');
+            modal.setAttribute('aria-hidden', 'true');
+        });
+        // Reset forms
+        document.getElementById('addServerForm').reset();
+        clearAllErrors();
+    }
+    
+    // Show notification
+    function showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        // Trigger animation
+        setTimeout(() => notification.classList.add('show'), 100);
+        
+        // Remove notification
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
+        }, 5000);
+    }
+    
+    // Utility functions
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text ? text.replace(/[&<>"']/g, m => map[m]) : '';
+    }
+    
+    // Screen reader only class for accessibility
+    const style = document.createElement('style');
+    style.textContent = `
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        .server-config {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: var(--space-3);
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: var(--font-size-xs);
+            overflow-x: auto;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .server-config pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        
+        .server-config code {
+            color: var(--text-secondary);
+        }
+        
+        .tool-item {
+            padding: var(--space-3);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .tool-item:last-child {
+            border-bottom: none;
+        }
+        
+        .tool-name {
+            font-weight: 600;
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+            margin-bottom: var(--space-1);
+        }
+        
+        .tool-description {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        
+        .tool-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--space-4);
+        }
+    `;
+    document.head.appendChild(style);
+    </script>
+</body>
+</html>

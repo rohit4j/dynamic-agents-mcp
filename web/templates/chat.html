@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LangGraph Chat</title>
+    <link rel="stylesheet" href="/static/style.css?v={{ version }}">
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" onclick="newChat()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    New chat
+                </button>
+            </div>
+            
+            <div class="chat-history">
+                <div class="chat-item active" onclick="selectChat(this)">
+                    <span>Current Chat</span>
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="model-info">
+                    <span>Admin Function</span>
+                </div>
+                <div style="margin-top: 10px;">
+                    <a href="/mcp" style="color: var(--text-secondary); text-decoration: none; font-size: 12px;">⚙️ MCP Servers</a>
+                    <br>
+                    <a href="/agents" style="color: var(--text-secondary); text-decoration: none; font-size: 12px;">🤖 Agent Management</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main chat area -->
+        <div class="main-content">
+            <div class="chat-container">
+                <div class="messages" id="messages">
+                    <!-- Welcome message -->
+                    <div class="message assistant">
+                        <div class="message-content">
+                            <div class="avatar">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                </svg>
+                            </div>
+                            <div class="text">
+                                <p>Hello! I am CXOS AI Bot, how can I help you?</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input area -->
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="messageInput" 
+                            placeholder="Message LangGraph Agent..." 
+                            rows="1"
+                            onkeydown="handleKeyDown(event)"
+                            oninput="adjustTextareaHeight(this)"
+                        ></textarea>
+                        <button id="sendButton" onclick="sendMessage()" disabled>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M7 11l5-5 5 5M12 18V6" stroke="currentColor" stroke-width="2"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="input-footer">
+                        <small>LangGraph can make mistakes. Consider checking important information.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js?v={{ version }}"></script>
+</body>
+</html>

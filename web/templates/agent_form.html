@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Configuration - LangGraph Multi-Agent System</title>
+    <link rel="stylesheet" href="/static/management.css?v={{ version }}">
+    <meta name="description" content="Create and configure intelligent agents for your LangGraph system">
+</head>
+<body>
+    <!-- Skip Link for Accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <div class="management-container">
+        <!-- Header Section -->
+        <header class="management-header" role="banner">
+            <div class="header-content">
+                <div class="header-text">
+                    <h1 id="form-title">🤖 Create New Agent</h1>
+                    <p>Configure your intelligent agent with specific capabilities and tool assignments for optimal performance.</p>
+                </div>
+                <div class="header-actions">
+                    <a href="/agents" class="btn btn-secondary" aria-label="Return to agent management">
+                        <span aria-hidden="true">⬅️</span> Back to Agents
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Breadcrumb Navigation -->
+        <nav class="breadcrumb" aria-label="Breadcrumb navigation">
+            <a href="/" aria-label="Home">Home</a>
+            <span class="breadcrumb-separator" aria-hidden="true">/</span>
+            <a href="/agents" aria-label="Agent Management">Agents</a>
+            <span class="breadcrumb-separator" aria-hidden="true">/</span>
+            <span id="breadcrumb-current" aria-current="page">Create Agent</span>
+        </nav>
+
+        <!-- Notification Area -->
+        <div id="notification-area" role="alert" aria-live="polite" aria-atomic="true"></div>
+
+        <!-- Main Content -->
+        <main id="main-content" class="content-area" role="main">
+            <form id="agent-form" class="card" style="max-width: 800px; margin: 0 auto;" novalidate>
+                <input type="hidden" id="agent-id" name="agent_id">
+                
+                <!-- Basic Information Section -->
+                <fieldset class="form-section">
+                    <legend class="section-title">Basic Information</legend>
+                    
+                    <div class="form-group">
+                        <label for="agent-name" class="form-label required">Agent Name</label>
+                        <input type="text" 
+                               id="agent-name" 
+                               name="name" 
+                               class="form-input" 
+                               required 
+                               aria-describedby="name-help name-error"
+                               placeholder="e.g., Customer Support Agent">
+                        <div id="name-help" class="form-help">Choose a descriptive name that clearly identifies the agent's purpose</div>
+                        <div id="name-error" class="form-error" role="alert"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="agent-type" class="form-label required">Agent Type</label>
+                        <select id="agent-type" 
+                                name="agent_type" 
+                                class="form-select" 
+                                required 
+                                aria-describedby="type-help type-error">
+                            <option value="">Select agent type...</option>
+                            <option value="supervisor">Supervisor Agent</option>
+                            <option value="specialized">Specialized Agent</option>
+                        </select>
+                        <div id="type-help" class="form-help">Supervisor agents coordinate other agents, specialized agents perform specific tasks</div>
+                        <div id="type-error" class="form-error" role="alert"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="agent-description" class="form-label required">Description</label>
+                        <textarea id="agent-description" 
+                                  name="description" 
+                                  class="form-textarea" 
+                                  required
+                                  aria-describedby="description-help description-error"
+                                  placeholder="Describe what this agent does and its capabilities..."
+                                  rows="4"></textarea>
+                        <div id="description-help" class="form-help">This description helps the supervisor route requests appropriately and provides context to users</div>
+                        <div id="description-error" class="form-error" role="alert"></div>
+                    </div>
+                </fieldset>
+                
+                <!-- Supervisor Configuration Section -->
+                <fieldset id="supervisor-config" class="form-section" style="display: none;" aria-labelledby="supervisor-legend">
+                    <legend id="supervisor-legend" class="section-title">Supervisor Configuration</legend>
+                    
+                    <div class="form-group">
+                        <label for="managed-agents-search" class="form-label">Managed Agents</label>
+                        <div class="multi-select-container">
+                            <input type="text" 
+                                   id="managed-agents-search" 
+                                   class="form-input" 
+                                   placeholder="Search and select agents to manage..."
+                                   aria-describedby="managed-agents-help"
+                                   autocomplete="off">
+                            <div id="managed-agents-dropdown" 
+                                 class="multi-select-dropdown" 
+                                 role="listbox" 
+                                 aria-label="Available agents to manage"></div>
+                        </div>
+                        <div id="selected-managed-agents" class="tag-list" role="region" aria-label="Selected managed agents"></div>
+                        <div id="managed-agents-help" class="form-help">Select the specialized agents this supervisor will coordinate and route requests to</div>
+                    </div>
+                </fieldset>
+                
+                <!-- Specialized Agent Configuration Section -->
+                <fieldset id="specialized-config" class="form-section" style="display: none;" aria-labelledby="specialized-legend">
+                    <legend id="specialized-legend" class="section-title">Tool Configuration</legend>
+                    
+                    <div class="form-group">
+                        <label for="mcp-server" class="form-label">MCP Server</label>
+                        <select id="mcp-server" 
+                                class="form-select" 
+                                aria-describedby="mcp-server-help">
+                            <option value="">Select MCP server to discover tools...</option>
+                        </select>
+                        <div id="mcp-server-help" class="form-help">Choose an MCP server to browse and select available tools for this agent</div>
+                    </div>
+                    
+                    <div id="tool-discovery" class="tool-discovery-section" style="display: none;" role="region" aria-labelledby="tools-heading">
+                        <h3 id="tools-heading">
+                            Available Tools 
+                            <span id="tool-loading" class="loading-spinner" style="display: none;" aria-label="Loading tools"></span>
+                        </h3>
+                        <div class="tool-list" 
+                             id="available-tools" 
+                             role="group" 
+                             aria-label="Available tools for selection"></div>
+                        <div id="selected-tools" 
+                             class="tag-list" 
+                             role="region" 
+                             aria-label="Selected tools"></div>
+                    </div>
+                </fieldset>
+                
+                <!-- Model Configuration Section -->
+                <fieldset class="form-section" aria-labelledby="model-legend">
+                    <legend id="model-legend" class="section-title">Model Configuration</legend>
+                    
+                    <div class="form-group">
+                        <label for="model-name" class="form-label required">Model Name</label>
+                        <input type="text" 
+                               id="model-name" 
+                               name="model_name" 
+                               class="form-input" 
+                               required
+                               value="gemini-1.5-flash" 
+                               aria-describedby="model-help model-error"
+                               placeholder="e.g., gemini-1.5-flash">
+                        <div id="model-help" class="form-help">The LLM model to use for this agent's reasoning and responses</div>
+                        <div id="model-error" class="form-error" role="alert"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="temperature" class="form-label">Temperature</label>
+                        <input type="number" 
+                               id="temperature" 
+                               name="temperature" 
+                               class="form-input" 
+                               min="0" 
+                               max="2" 
+                               step="0.1" 
+                               value="0.1"
+                               aria-describedby="temperature-help">
+                        <div id="temperature-help" class="form-help">Controls creativity in responses (0 = deterministic, 2 = very creative). Lower values for consistent responses, higher for creative tasks.</div>
+                    </div>
+                </fieldset>
+                
+                <!-- Form Actions -->
+                <div class="modal-actions" style="border-top: 1px solid var(--border-color); padding-top: var(--space-6); margin-top: var(--space-6);">
+                    <a href="/agents" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary" id="submit-btn">
+                        <span id="submit-text">Create Agent</span>
+                    </button>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <script>
+    // Global state
+    let availableAgents = [];
+    let availableServers = [];
+    let selectedManagedAgents = new Set();
+    let selectedTools = new Set();
+    let discoveredTools = [];
+    let editMode = false;
+    let editingAgentId = null;
+    
+    // Initialize form
+    document.addEventListener('DOMContentLoaded', async function() {
+        setupEventListeners();
+        await initializeForm();
+    });
+    
+    // Initialize form data and mode
+    async function initializeForm() {
+        // Check if editing
+        const urlParams = new URLSearchParams(window.location.search);
+        editingAgentId = urlParams.get('edit');
+        
+        if (editingAgentId) {
+            editMode = true;
+            document.getElementById('form-title').innerHTML = '✏️ Edit Agent';
+            document.getElementById('breadcrumb-current').textContent = 'Edit Agent';
+            document.getElementById('submit-text').textContent = 'Update Agent';
+            await loadAgentForEdit(editingAgentId);
+        }
+        
+        // Load available data
+        await Promise.all([
+            loadAvailableAgents(),
+            loadMCPServers()
+        ]);
+    }
+    
+    // Setup event listeners
+    function setupEventListeners() {
+        // Form validation and submission
+        document.getElementById('agent-form').addEventListener('submit', handleFormSubmit);
+        document.getElementById('agent-form').addEventListener('input', clearFieldErrors);
+        
+        // Agent type change
+        document.getElementById('agent-type').addEventListener('change', handleAgentTypeChange);
+        
+        // Managed agents search
+        const managedAgentsSearch = document.getElementById('managed-agents-search');
+        managedAgentsSearch.addEventListener('focus', showManagedAgentsDropdown);
+        managedAgentsSearch.addEventListener('input', filterManagedAgents);
+        
+        // MCP server change
+        document.getElementById('mcp-server').addEventListener('change', handleMCPServerChange);
+        
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', handleOutsideClick);
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', handleKeyDown);
+    }
+    
+    // Handle keyboard navigation
+    function handleKeyDown(e) {
+        if (e.key === 'Escape') {
+            hideManagedAgentsDropdown();
+        }
+    }
+    
+    // Handle outside clicks
+    function handleOutsideClick(e) {
+        if (!e.target.closest('.multi-select-container')) {
+            hideManagedAgentsDropdown();
+        }
+    }
+    
+    // Clear field errors on input
+    function clearFieldErrors(e) {
+        if (e.target.classList.contains('error')) {
+            e.target.classList.remove('error');
+            const errorId = e.target.getAttribute('aria-describedby')?.split(' ').find(id => id.endsWith('-error'));
+            if (errorId) {
+                document.getElementById(errorId).textContent = '';
+            }
+        }
+    }
+    
+    // Load agent for editing
+    async function loadAgentForEdit(agentId) {
+        try {
+            const response = await fetch(`/api/agents/${agentId}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const agent = await response.json();
+            
+            // Fill form fields
+            document.getElementById('agent-id').value = agent.id;
+            document.getElementById('agent-name').value = agent.name;
+            document.getElementById('agent-type').value = agent.agent_type;
+            document.getElementById('agent-description').value = agent.description;
+            document.getElementById('model-name').value = agent.llm_config?.model_name || 'gemini-1.5-flash';
+            document.getElementById('temperature').value = agent.llm_config?.temperature || 0.1;
+            
+            // Trigger type change to show appropriate section
+            handleAgentTypeChange();
+            
+            // Load managed agents for supervisor
+            if (agent.agent_type === 'supervisor' && agent.managed_agents) {
+                selectedManagedAgents = new Set(agent.managed_agents);
+                updateSelectedManagedAgents();
+            }
+            
+            // Load tool assignments for specialized agent
+            if (agent.agent_type === 'specialized' && agent.mcp_tool_assignments) {
+                selectedTools = new Set(agent.mcp_tool_assignments);
+                updateSelectedTools();
+            }
+            
+        } catch (error) {
+            console.error('Error loading agent:', error);
+            showNotification('Failed to load agent data: ' + error.message, 'error');
+            setTimeout(() => window.location.href = '/agents', 2000);
+        }
+    }
+    
+    // Load available agents for supervisor selection
+    async function loadAvailableAgents() {
+        try {
+            const response = await fetch('/api/agents/?active_only=true');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const agents = await response.json();
+            availableAgents = agents.filter(a => a.agent_type === 'specialized');
+            
+        } catch (error) {
+            console.error('Error loading agents:', error);
+            showNotification('Failed to load available agents', 'error');
+        }
+    }
+    
+    // Load MCP servers
+    async function loadMCPServers() {
+        try {
+            const response = await fetch('/api/mcp-servers?active_only=true');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            availableServers = await response.json();
+            
+            // Populate MCP server dropdown
+            const serverSelect = document.getElementById('mcp-server');
+            serverSelect.innerHTML = '<option value="">Select MCP server to discover tools...</option>';
+            
+            availableServers.forEach(server => {
+                const option = document.createElement('option');
+                option.value = server.id;
+                option.textContent = server.name;
+                serverSelect.appendChild(option);
+            });
+            
+        } catch (error) {
+            console.error('Error loading MCP servers:', error);
+            showNotification('Failed to load MCP servers', 'error');
+        }
+    }
+    
+    // Handle agent type change
+    function handleAgentTypeChange() {
+        const agentType = document.getElementById('agent-type').value;
+        const supervisorConfig = document.getElementById('supervisor-config');
+        const specializedConfig = document.getElementById('specialized-config');
+        
+        // Hide all conditional sections
+        supervisorConfig.style.display = 'none';
+        specializedConfig.style.display = 'none';
+        
+        // Show appropriate section
+        if (agentType === 'supervisor') {
+            supervisorConfig.style.display = 'block';
+        } else if (agentType === 'specialized') {
+            specializedConfig.style.display = 'block';
+        }
+    }
+    
+    // Show managed agents dropdown
+    function showManagedAgentsDropdown() {
+        const dropdown = document.getElementById('managed-agents-dropdown');
+        dropdown.innerHTML = '';
+        
+        if (availableAgents.length === 0) {
+            const noAgents = document.createElement('div');
+            noAgents.className = 'multi-select-item';
+            noAgents.textContent = 'No specialized agents available';
+            noAgents.style.opacity = '0.6';
+            dropdown.appendChild(noAgents);
+        } else {
+            availableAgents.forEach((agent, index) => {
+                const item = document.createElement('div');
+                item.className = 'multi-select-item';
+                item.setAttribute('role', 'option');
+                item.setAttribute('tabindex', '0');
+                item.setAttribute('aria-selected', selectedManagedAgents.has(agent.name));
+                
+                if (selectedManagedAgents.has(agent.name)) {
+                    item.classList.add('selected');
+                }
+                
+                item.innerHTML = `
+                    <strong>${escapeHtml(agent.name)}</strong>
+                    <div style="font-size: 0.8em; color: var(--text-muted);">${escapeHtml(agent.description)}</div>
+                `;
+                
+                item.onclick = () => toggleManagedAgent(agent.name);
+                item.onkeydown = (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleManagedAgent(agent.name);
+                    }
+                };
+                
+                dropdown.appendChild(item);
+            });
+        }
+        
+        dropdown.style.display = 'block';
+    }
+    
+    // Hide managed agents dropdown
+    function hideManagedAgentsDropdown() {
+        document.getElementById('managed-agents-dropdown').style.display = 'none';
+    }
+    
+    // Filter managed agents
+    function filterManagedAgents(e) {
+        const query = e.target.value.toLowerCase();
+        const dropdown = document.getElementById('managed-agents-dropdown');
+        
+        Array.from(dropdown.children).forEach(item => {
+            const visible = item.textContent.toLowerCase().includes(query);
+            item.style.display = visible ? 'block' : 'none';
+        });
+    }
+    
+    // Toggle managed agent selection
+    function toggleManagedAgent(agentName) {
+        if (selectedManagedAgents.has(agentName)) {
+            selectedManagedAgents.delete(agentName);
+        } else {
+            selectedManagedAgents.add(agentName);
+        }
+        
+        // Update UI
+        const dropdown = document.getElementById('managed-agents-dropdown');
+        Array.from(dropdown.children).forEach(item => {
+            if (item.textContent.includes(agentName)) {
+                item.classList.toggle('selected');
+                item.setAttribute('aria-selected', selectedManagedAgents.has(agentName));
+            }
+        });
+        
+        updateSelectedManagedAgents();
+    }
+    
+    // Update selected managed agents display
+    function updateSelectedManagedAgents() {
+        const container = document.getElementById('selected-managed-agents');
+        container.innerHTML = '';
+        
+        if (selectedManagedAgents.size === 0) {
+            container.innerHTML = '<div class="form-help">No agents selected</div>';
+            return;
+        }
+        
+        selectedManagedAgents.forEach(agentName => {
+            const tag = document.createElement('div');
+            tag.className = 'tag tag-removable';
+            tag.innerHTML = `
+                ${escapeHtml(agentName)}
+                <span class="tag-remove" 
+                      onclick="toggleManagedAgent('${escapeHtml(agentName)}')"
+                      aria-label="Remove ${escapeHtml(agentName)}">×</span>
+            `;
+            container.appendChild(tag);
+        });
+    }
+    
+    // Handle MCP server change
+    async function handleMCPServerChange() {
+        const serverId = document.getElementById('mcp-server').value;
+        const toolDiscovery = document.getElementById('tool-discovery');
+        
+        if (!serverId) {
+            toolDiscovery.style.display = 'none';
+            return;
+        }
+        
+        toolDiscovery.style.display = 'block';
+        document.getElementById('tool-loading').style.display = 'inline-block';
+        
+        try {
+            const response = await fetch(`/api/mcp-servers/${serverId}/discover`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            discoveredTools = result.tools || [];
+            
+            displayAvailableTools();
+            
+        } catch (error) {
+            console.error('Error discovering tools:', error);
+            showNotification('Failed to discover tools from server: ' + error.message, 'error');
+        } finally {
+            document.getElementById('tool-loading').style.display = 'none';
+        }
+    }
+    
+    // Display available tools
+    function displayAvailableTools() {
+        const container = document.getElementById('available-tools');
+        container.innerHTML = '';
+        
+        if (discoveredTools.length === 0) {
+            container.innerHTML = '<div class="form-help">No tools found on this server</div>';
+            return;
+        }
+        
+        discoveredTools.forEach((tool, index) => {
+            const toolItem = document.createElement('div');
+            toolItem.className = 'tool-item';
+            toolItem.setAttribute('role', 'checkbox');
+            toolItem.setAttribute('tabindex', '0');
+            toolItem.setAttribute('aria-checked', selectedTools.has(tool.name));
+            
+            if (selectedTools.has(tool.name)) {
+                toolItem.classList.add('selected');
+            }
+            
+            toolItem.innerHTML = `
+                <div class="tool-name">${escapeHtml(tool.name)}</div>
+                <div class="tool-description">${escapeHtml(tool.description || 'No description available')}</div>
+            `;
+            
+            toolItem.onclick = () => toggleTool(tool.name);
+            toolItem.onkeydown = (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleTool(tool.name);
+                }
+            };
+            
+            container.appendChild(toolItem);
+        });
+        
+        updateSelectedTools();
+    }
+    
+    // Toggle tool selection
+    function toggleTool(toolName) {
+        if (selectedTools.has(toolName)) {
+            selectedTools.delete(toolName);
+        } else {
+            selectedTools.add(toolName);
+        }
+        
+        // Update UI
+        const toolItems = document.querySelectorAll('.tool-item');
+        toolItems.forEach(item => {
+            const name = item.querySelector('.tool-name').textContent;
+            if (name === toolName) {
+                item.classList.toggle('selected');
+                item.setAttribute('aria-checked', selectedTools.has(toolName));
+            }
+        });
+        
+        updateSelectedTools();
+    }
+    
+    // Update selected tools display
+    function updateSelectedTools() {
+        const container = document.getElementById('selected-tools');
+        container.innerHTML = '';
+        
+        if (selectedTools.size === 0) {
+            container.innerHTML = '<div class="form-help">No tools selected</div>';
+            return;
+        }
+        
+        const label = document.createElement('strong');
+        label.textContent = `Selected Tools (${selectedTools.size}): `;
+        container.appendChild(label);
+        
+        selectedTools.forEach(toolName => {
+            const tag = document.createElement('div');
+            tag.className = 'tag tag-removable';
+            tag.innerHTML = `
+                ${escapeHtml(toolName)}
+                <span class="tag-remove" 
+                      onclick="toggleTool('${escapeHtml(toolName)}')"
+                      aria-label="Remove ${escapeHtml(toolName)}">×</span>
+            `;
+            container.appendChild(tag);
+        });
+    }
+    
+    // Handle form submission
+    async function handleFormSubmit(e) {
+        e.preventDefault();
+        
+        // Clear previous errors
+        clearAllErrors();
+        
+        // Get form data
+        const formData = {
+            name: document.getElementById('agent-name').value.trim(),
+            agent_type: document.getElementById('agent-type').value,
+            description: document.getElementById('agent-description').value.trim(),
+            mcp_tool_assignments: Array.from(selectedTools),
+            managed_agents: Array.from(selectedManagedAgents),
+            llm_config: {
+                model_name: document.getElementById('model-name').value.trim(),
+                temperature: parseFloat(document.getElementById('temperature').value)
+            },
+            is_active: true
+        };
+        
+        // Validate form
+        if (!validateForm(formData)) {
+            return;
+        }
+        
+        // Submit form
+        const submitBtn = document.getElementById('submit-btn');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.classList.add('btn-loading');
+        submitBtn.disabled = true;
+        
+        try {
+            const url = editMode 
+                ? `/api/agents/${editingAgentId}`
+                : '/api/agents/';
+                
+            const method = editMode ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to save agent');
+            }
+            
+            // Success - show notification and redirect
+            showNotification(`Agent ${editMode ? 'updated' : 'created'} successfully!`);
+            setTimeout(() => window.location.href = '/agents', 1500);
+            
+        } catch (error) {
+            console.error('Error saving agent:', error);
+            showNotification('Failed to save agent: ' + error.message, 'error');
+        } finally {
+            submitBtn.classList.remove('btn-loading');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    }
+    
+    // Validate form
+    function validateForm(formData) {
+        let hasErrors = false;
+        
+        if (!formData.name) {
+            showFieldError('agent-name', 'name-error', 'Agent name is required');
+            hasErrors = true;
+        }
+        
+        if (!formData.agent_type) {
+            showFieldError('agent-type', 'type-error', 'Agent type is required');
+            hasErrors = true;
+        }
+        
+        if (!formData.description) {
+            showFieldError('agent-description', 'description-error', 'Description is required');
+            hasErrors = true;
+        }
+        
+        if (!formData.llm_config.model_name) {
+            showFieldError('model-name', 'model-error', 'Model name is required');
+            hasErrors = true;
+        }
+        
+        if (isNaN(formData.llm_config.temperature) || 
+            formData.llm_config.temperature < 0 || 
+            formData.llm_config.temperature > 2) {
+            showFieldError('temperature', 'temperature-error', 'Temperature must be between 0 and 2');
+            hasErrors = true;
+        }
+        
+        if (hasErrors) {
+            // Focus first error field
+            const firstError = document.querySelector('.form-input.error, .form-select.error, .form-textarea.error');
+            if (firstError) {
+                firstError.focus();
+            }
+        }
+        
+        return !hasErrors;
+    }
+    
+    // Show field error
+    function showFieldError(fieldId, errorId, message) {
+        const field = document.getElementById(fieldId);
+        const errorElement = document.getElementById(errorId);
+        
+        field.classList.add('error');
+        errorElement.textContent = message;
+        
+        // Announce error to screen readers
+        errorElement.setAttribute('aria-live', 'polite');
+    }
+    
+    // Clear all errors
+    function clearAllErrors() {
+        document.querySelectorAll('.form-input, .form-select, .form-textarea').forEach(el => {
+            el.classList.remove('error');
+        });
+        document.querySelectorAll('.form-error').forEach(el => {
+            el.textContent = '';
+        });
+    }
+    
+    // Show notification
+    function showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        // Trigger animation
+        setTimeout(() => notification.classList.add('show'), 100);
+        
+        // Remove notification
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
+        }, 5000);
+    }
+    
+    // Utility functions
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text ? text.replace(/[&<>"']/g, m => map[m]) : '';
+    }
+    </script>
+
+    <style>
+    /* Additional styles specific to the form */
+    .section-title {
+        font-size: var(--font-size-lg);
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: var(--space-4);
+        padding-bottom: var(--space-2);
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .form-section {
+        border: none;
+        padding: 0;
+        margin-bottom: var(--space-8);
+    }
+    
+    .multi-select-container {
+        position: relative;
+    }
+    
+    .multi-select-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        max-height: 300px;
+        overflow-y: auto;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 var(--radius-md) var(--radius-md);
+        box-shadow: var(--shadow-lg);
+        z-index: 1000;
+        display: none;
+    }
+    
+    .multi-select-item {
+        padding: var(--space-3) var(--space-4);
+        cursor: pointer;
+        transition: var(--transition-fast);
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .multi-select-item:last-child {
+        border-bottom: none;
+    }
+    
+    .multi-select-item:hover,
+    .multi-select-item:focus {
+        background: var(--bg-surface);
+        outline: 2px solid var(--primary-color);
+        outline-offset: -2px;
+    }
+    
+    .multi-select-item.selected {
+        background: var(--primary-color);
+        color: var(--text-on-primary);
+    }
+    
+    .tool-discovery-section {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: var(--space-4);
+        margin-top: var(--space-4);
+    }
+    
+    .tool-discovery-section h3 {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin-bottom: var(--space-4);
+        font-size: var(--font-size-lg);
+        color: var(--text-primary);
+    }
+    
+    .tool-list {
+        max-height: 400px;
+        overflow-y: auto;
+        margin-bottom: var(--space-4);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+    }
+    
+    .tool-item {
+        padding: var(--space-4);
+        border-bottom: 1px solid var(--border-color);
+        cursor: pointer;
+        transition: var(--transition-fast);
+    }
+    
+    .tool-item:last-child {
+        border-bottom: none;
+    }
+    
+    .tool-item:hover,
+    .tool-item:focus {
+        background: var(--bg-surface);
+        outline: 2px solid var(--primary-color);
+        outline-offset: -2px;
+    }
+    
+    .tool-item.selected {
+        background: var(--primary-color);
+        color: var(--text-on-primary);
+    }
+    
+    .tool-name {
+        font-weight: 600;
+        font-size: var(--font-size-base);
+        margin-bottom: var(--space-1);
+    }
+    
+    .tool-description {
+        font-size: var(--font-size-sm);
+        opacity: 0.8;
+        line-height: 1.4;
+    }
+    
+    .loading-spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--border-color);
+        border-top-color: var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+    
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .header-content {
+            flex-direction: column;
+            gap: var(--space-4);
+        }
+        
+        .header-actions {
+            width: 100%;
+        }
+        
+        .header-actions .btn {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .modal-actions {
+            flex-direction: column;
+        }
+        
+        .modal-actions .btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+    </style>
+</body>
+</html>
