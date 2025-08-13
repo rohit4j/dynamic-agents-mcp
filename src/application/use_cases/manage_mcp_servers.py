@@ -13,9 +13,10 @@ logger = logging.getLogger(__name__)
 class ManageMCPServersUseCase:
     """Use case for managing MCP servers."""
     
-    def __init__(self, mcp_repository: MCPRepository, mcp_client_factory: MCPClientFactory):
+    def __init__(self, mcp_repository: MCPRepository, mcp_client_factory: MCPClientFactory, multi_agent_system=None):
         self._repository = mcp_repository
         self._client_factory = mcp_client_factory
+        self._multi_agent_system = multi_agent_system
     
     async def create_configuration(self, name: str, server_type: str, config: Dict[str, Any]) -> MCPConfiguration:
         """Create a new MCP configuration."""
@@ -126,7 +127,34 @@ class ManageMCPServersUseCase:
         if not configuration:
             raise ValueError(f"MCP configuration not found: {config_id}")
         
-        # Test connection
+        # Try to use existing persistent session first
+        if (self._multi_agent_system and 
+            hasattr(self._multi_agent_system, 'mcp_sessions') and 
+            configuration.name in self._multi_agent_system.mcp_sessions):
+            
+            logger.info(f"Testing using existing persistent session: {configuration.name}")
+            try:
+                # Check if existing session is still alive
+                session_info = self._multi_agent_system.mcp_sessions[configuration.name]
+                session = session_info['session']
+                
+                # Try to load tools as a connection test
+                from langchain_mcp_adapters.tools import load_mcp_tools
+                tools = await load_mcp_tools(session)
+                
+                return {
+                    "success": True,
+                    "message": f"Successfully connected to {configuration.name} (using persistent session)",
+                    "tool_count": len(tools),
+                    "tools": [{"name": tool.name, "description": tool.description} for tool in tools[:5]]  # Limit to first 5
+                }
+                
+            except Exception as e:
+                logger.warning(f"Persistent session test failed for {configuration.name}: {e}")
+                logger.info("Falling back to new connection test...")
+        
+        # Fall back to creating new client for testing
+        logger.info(f"Testing with new client: {configuration.name}")
         result = await self._client_factory.test_connection(configuration)
         return result
     
@@ -142,9 +170,29 @@ class ManageMCPServersUseCase:
         if not configuration.is_active:
             raise ValueError(f"Cannot discover tools from inactive configuration: {configuration.name}")
         
-        # Create client and discover tools
-        client = await self._client_factory.create_client(configuration)
-        tools = await self._client_factory.discover_tools(client)
+        # Try to use existing persistent session first
+        tools = []
+        if (self._multi_agent_system and 
+            hasattr(self._multi_agent_system, 'mcp_sessions') and 
+            configuration.name in self._multi_agent_system.mcp_sessions):
+            
+            logger.info(f"Using existing persistent session for: {configuration.name}")
+            try:
+                # Use existing session from multi-agent system
+                from langchain_mcp_adapters.tools import load_mcp_tools
+                session_info = self._multi_agent_system.mcp_sessions[configuration.name]
+                tools = await load_mcp_tools(session_info['session'])
+                logger.info(f"Successfully discovered tools using persistent session")
+            except Exception as e:
+                logger.warning(f"Failed to use persistent session for {configuration.name}: {e}")
+                logger.info("Falling back to creating new client...")
+                # Fall through to create new client
+        
+        # Create new client if no persistent session or if it failed
+        if not tools:
+            logger.info(f"Creating new client for tool discovery: {configuration.name}")
+            client = await self._client_factory.create_client(configuration)
+            tools = await self._client_factory.discover_tools(client)
         
         # Format tool information
         formatted_tools = MCPService.format_tool_info(tools)

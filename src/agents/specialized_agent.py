@@ -89,6 +89,10 @@ class SpecializedAgent:
             if self.agent is None and self.config.has_tools():
                 await self._initialize_agent()
             
+            # Verify MCP connections are still alive before processing
+            if self.config.has_tools():
+                await self._verify_mcp_connections()
+            
             messages = state["messages"]
             if not messages:
                 return {
@@ -227,6 +231,44 @@ class SpecializedAgent:
     def _get_timestamp(self) -> str:
         """Get current timestamp in ISO format."""
         return datetime.now().isoformat()
+    
+    async def _verify_mcp_connections(self):
+        """Verify that MCP connections are still alive."""
+        try:
+            if not (self.multi_agent_system and hasattr(self.multi_agent_system, 'mcp_sessions')):
+                return  # No sessions to verify
+            
+            # Check if any of the tools assigned to this agent use MCP servers with dead connections
+            if self.config.mcp_tool_assignments:
+                # Get current tool names to check which servers they come from
+                available_tools = self.multi_agent_system.get_mcp_tools()
+                available_tool_names = {tool.name for tool in available_tools}
+                
+                # Check if any assigned tools are missing (indicating connection issues)
+                missing_tools = [tool_name for tool_name in self.config.mcp_tool_assignments 
+                               if tool_name not in available_tool_names]
+                
+                if missing_tools:
+                    logger.warning(f"Agent '{self.config.name}' has missing tools: {missing_tools}")
+                    logger.info(f"Attempting to reconnect external MCP servers...")
+                    
+                    # Try to reconnect external servers
+                    if hasattr(self.multi_agent_system, 'reconnect_external_servers'):
+                        reconnection_results = await self.multi_agent_system.reconnect_external_servers()
+                        if reconnection_results:
+                            logger.info(f"Reconnection results: {reconnection_results}")
+                            
+                            # Reload tools after reconnection
+                            if hasattr(self.multi_agent_system, '_load_mcp_tools'):
+                                await self.multi_agent_system._load_mcp_tools()
+                                logger.info("Reloaded MCP tools after reconnection")
+                            
+                            # Re-initialize agent with potentially new tools
+                            self.agent = None  # Force re-initialization
+                            await self._initialize_agent()
+                        
+        except Exception as e:
+            logger.warning(f"Error verifying MCP connections for '{self.config.name}': {e}")
     
     def _determine_tool_success(self, tool_message) -> bool:
         """Determine if a tool call was successful based on the message."""

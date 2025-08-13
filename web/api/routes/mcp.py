@@ -15,7 +15,7 @@ from src.application.dto.mcp_dto import (
     MCPSummaryResponse,
     MCPToolInfo
 )
-from src.infrastructure.web.dependencies import get_mcp_repository, get_mcp_client_factory
+from src.infrastructure.web.dependencies import get_mcp_repository, get_mcp_client_factory, get_multi_agent_system
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["MCP Management"])
@@ -24,10 +24,11 @@ templates = Jinja2Templates(directory="web/templates")
 
 async def get_manage_mcp_use_case(
     mcp_repository=Depends(get_mcp_repository),
-    mcp_client_factory=Depends(get_mcp_client_factory)
+    mcp_client_factory=Depends(get_mcp_client_factory),
+    multi_agent_system=Depends(get_multi_agent_system)
 ) -> ManageMCPServersUseCase:
     """Get MCP management use case with dependencies."""
-    return ManageMCPServersUseCase(mcp_repository, mcp_client_factory)
+    return ManageMCPServersUseCase(mcp_repository, mcp_client_factory, multi_agent_system)
 
 
 @router.get("/mcp", response_class=HTMLResponse)
