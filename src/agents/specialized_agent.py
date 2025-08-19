@@ -54,7 +54,17 @@ class SpecializedAgent:
             
             if tools:
                 # Bind tools to model (required for Gemini)
-                model_with_tools = self.model.bind_tools(tools)
+                # Verify tool binding and handle errors
+                try:
+                    model_with_tools = self.model.bind_tools(tools)
+                    # Verify tools were bound correctly
+                    if not hasattr(model_with_tools, 'kwargs') or 'tools' not in model_with_tools.kwargs:
+                        raise RuntimeError(f"Failed to bind {len(tools)} tools to model")
+                except Exception as e:
+                    logger.error(f"Tool binding failed for {self.config.name}: {e}")
+                    # Fallback to model without tools
+                    model_with_tools = self.model
+                    tools = []  # Clear tools if binding failed
                 
                 # Create ReAct agent with system prompt
                 system_prompt = self.config.get_system_prompt()

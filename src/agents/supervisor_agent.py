@@ -72,7 +72,7 @@ Respond with ONLY the agent name that should handle this request, or "NONE" if n
 Do not include any other text or explanation."""
             
             response = await self.model.ainvoke([HumanMessage(content=routing_prompt)])
-            decision = response.content.strip()
+            decision = response.content.strip() if response.content else "NONE"
             
             logger.info(f"Routing decision: {decision}")
             

@@ -45,6 +45,16 @@ async def chat_page(request: Request):
     })
 
 
+@router.get("/circles", response_class=HTMLResponse)
+async def circles_page(request: Request):
+    """Serve the Circles.Life customer support interface."""
+    version = getattr(request.app.state, 'static_version', '')
+    return templates.TemplateResponse("circles.html", {
+        "request": request,
+        "version": version
+    })
+
+
 @router.get("/agents", response_class=HTMLResponse)
 async def agents_page(request: Request):
     """Serve the agent management interface."""

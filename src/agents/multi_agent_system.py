@@ -205,9 +205,13 @@ class MultiAgentSystem:
                 if context:
                     # Add more specific exception handling
                     try:
-                        await context.__aexit__(None, None, None)
-                        logger.info(f"Cleaned up session for {server_name}")
-                    except (asyncio.CancelledError, RuntimeError) as e:
+                        # Check if context is still valid before cleanup
+                        if hasattr(context, '_closed') and context._closed:
+                            logger.debug(f"Session already closed for {server_name}")
+                        else:
+                            await context.__aexit__(None, None, None)
+                            logger.info(f"Cleaned up session for {server_name}")
+                    except (asyncio.CancelledError, RuntimeError, AttributeError) as e:
                         # Handle cancelled or cross-task context manager issues
                         logger.warning(f"Context already cancelled/invalid for {server_name}: {e}")
                     except Exception as e:

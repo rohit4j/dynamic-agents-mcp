@@ -81,8 +81,13 @@ class SendMessageUseCase:
                                 if isinstance(node_result, dict) and "messages" in node_result:
                                     messages = node_result["messages"]
                                     if messages and hasattr(messages[-1], 'content'):
-                                        final_response = messages[-1].content
-                                        logger.debug(f"Updated final_response from {node_name}: {final_response}")
+                                        # Handle None content gracefully
+                                        content = messages[-1].content
+                                        if content is not None:
+                                            final_response = content
+                                            logger.debug(f"Updated final_response from {node_name}: {final_response}")
+                                        else:
+                                            logger.warning(f"Received None content from {node_name}")
                 
                 elif isinstance(chunk, dict):
                     if "error" in chunk:
@@ -96,9 +101,11 @@ class SendMessageUseCase:
                 
             # Send the final response if we have one
             if final_response:
+                # Ensure content is safe and not None
+                safe_content = str(final_response) if final_response is not None else ""
                 yield SendMessageResponse(
                     session_id=session.id,
-                    content=final_response,
+                    content=safe_content,
                     done=False
                 )
             else:

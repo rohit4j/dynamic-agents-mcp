@@ -27,7 +27,15 @@ def calculate(expression: str) -> str:
         # Safe math functions only
         safe_functions = {"abs": abs, "round": round, "min": min, "max": max}
         result = eval(expression, {"__builtins__": {}}, safe_functions)
-        result_str = str(float(result))
+        
+        # Handle None and ensure string conversion
+        if result is None:
+            result_str = "0"
+        else:
+            try:
+                result_str = str(float(result))
+            except (TypeError, ValueError):
+                result_str = str(result)
         
         logger.info(f"Result: {result_str}")
         return result_str

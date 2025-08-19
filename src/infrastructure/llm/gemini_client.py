@@ -18,7 +18,7 @@ class GeminiClient:
         """Generate a title using the LLM."""
         try:
             response = self.model.invoke(prompt)
-            return response.content.strip()
+            return response.content.strip() if response.content else ""
         except Exception as e:
             logger.error(f"Error generating title: {e}")
             raise

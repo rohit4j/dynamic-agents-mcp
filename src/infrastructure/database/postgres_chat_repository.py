@@ -63,17 +63,25 @@ class PostgresChatRepository(ChatRepository):
                 for msg in channel_values["messages"]:
                     # Convert to domain message
                     if hasattr(msg, 'type') and hasattr(msg, 'content'):
-                        message_type = MessageType.HUMAN if msg.type == "human" else MessageType.AI
-                        messages.append(Message(
-                            content=msg.content,
-                            type=message_type
-                        ))
+                        # Skip messages with None content
+                        if msg.content is not None:
+                            message_type = MessageType.HUMAN if msg.type == "human" else MessageType.AI
+                            messages.append(Message(
+                                content=msg.content,
+                                type=message_type
+                            ))
+                        else:
+                            logger.debug(f"Skipping message with None content in thread {thread_id}")
                     elif isinstance(msg, dict) and "type" in msg and "content" in msg:
-                        message_type = MessageType.HUMAN if msg["type"] == "human" else MessageType.AI
-                        messages.append(Message(
-                            content=msg["content"],
-                            type=message_type
-                        ))
+                        # Skip messages with None content
+                        if msg["content"] is not None:
+                            message_type = MessageType.HUMAN if msg["type"] == "human" else MessageType.AI
+                            messages.append(Message(
+                                content=msg["content"],
+                                type=message_type
+                            ))
+                        else:
+                            logger.debug(f"Skipping dict message with None content in thread {thread_id}")
             
             logger.info(f"Retrieved {len(messages)} messages for thread {thread_id}")
             return messages

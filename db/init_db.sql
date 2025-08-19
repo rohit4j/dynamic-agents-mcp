@@ -63,33 +63,12 @@ VALUES
         "managed_agents": []
     }'::jsonb,
     true
-),
-(
-    'Customer Support Agent',
-    'specialized',
-    '{
-        "description": "Handles customer inquiries and general support questions",
-        "model_config": {"model_name": "gemini-1.5-flash"},
-        "mcp_tool_assignments": [],
-        "managed_agents": []
-    }'::jsonb,
-    true
 )
 ON CONFLICT (name) DO NOTHING;
 
 -- Default MCP configurations
 INSERT INTO mcp_configurations (name, server_type, config, is_active)
 VALUES
-(
-    'Basic Tools',
-    'internal',
-    '{
-        "command": "python",
-        "args": ["mcp_server.py"],
-        "transport": "stdio"
-    }'::jsonb,
-    true
-),
 (
     'Order Management',
     'external',
