@@ -58,6 +58,30 @@ class MCPConfiguration:
         """Get environment variables."""
         return self.config.get('env', {})
     
+    def get_timeout(self) -> int:
+        """Get connection timeout for external servers."""
+        return self.config.get('timeout', 30)
+    
+    def get_sse_read_timeout(self) -> int:
+        """Get SSE read timeout for external servers."""
+        return self.config.get('sse_read_timeout', 1800)  # 30 minutes default
+    
+    def get_max_retries(self) -> int:
+        """Get maximum retry attempts for connection failures."""
+        return self.config.get('max_retries', 5)
+    
+    def get_retry_backoff(self) -> float:
+        """Get retry backoff multiplier."""
+        return self.config.get('retry_backoff', 2.0)
+    
+    def has_session_resumption(self) -> bool:
+        """Check if session resumption is enabled."""
+        return self.config.get('session_resumption', True)
+    
+    def requires_resilient_connection(self) -> bool:
+        """Check if this configuration requires resilient connection handling."""
+        return self.is_external() and self.get_transport() in ['sse', 'streamable_http']
+    
     def to_mcp_config(self) -> Dict[str, Any]:
         """Convert to MCP client configuration format."""
         transport = self.get_transport()
@@ -70,12 +94,28 @@ class MCPConfiguration:
             # Add optional headers if present
             if 'headers' in self.config:
                 config['headers'] = self.config['headers']
-            # Add optional timeout settings for SSE
-            if transport == 'sse':
-                if 'timeout' in self.config:
-                    config['timeout'] = self.config['timeout']
-                if 'sse_read_timeout' in self.config:
-                    config['sse_read_timeout'] = self.config['sse_read_timeout']
+            
+            # Enhanced timeout settings for SSE/HTTP transports
+            if transport in ['sse', 'streamable_http']:
+                # Connection timeout (default: 30s for initial connection)
+                config['timeout'] = self.config.get('timeout', 30)
+                
+                # SSE read timeout (default: 30 minutes for long-running streams)
+                default_sse_timeout = 1800  # 30 minutes
+                config['sse_read_timeout'] = self.config.get('sse_read_timeout', default_sse_timeout)
+                
+                # Connection resilience settings
+                if 'max_retries' in self.config:
+                    config['max_retries'] = self.config['max_retries']
+                if 'retry_backoff' in self.config:
+                    config['retry_backoff'] = self.config['retry_backoff']
+                if 'session_resumption' in self.config:
+                    config['session_resumption'] = self.config['session_resumption']
+                if 'httpx_client_factory' in self.config:
+                    config['httpx_client_factory'] = self.config['httpx_client_factory']
+                if 'auth' in self.config:
+                    config['auth'] = self.config['auth']
+                    
             return config
         else:
             # Process-based server configuration (stdio)

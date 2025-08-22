@@ -1,4 +1,4 @@
-"""MCP client implementation."""
+"""MCP client implementation with resilience and error recovery."""
 
 import logging
 from pathlib import Path
@@ -7,18 +7,22 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
 from ...domain.repositories.agent_repository import AgentRepository
 from ...domain.entities.agent import AgentCapabilities, Tool
+from .mcp_client_factory import MCPClientFactory
+from .resilient_mcp_client import ResilientMCPClientManager
 
 logger = logging.getLogger(__name__)
 
 
 class MCPAgentRepository(AgentRepository):
-    """MCP-based agent repository implementation."""
+    """MCP-based agent repository implementation with resilience."""
     
     def __init__(self, model, checkpointer=None):
         self.model = model
         self.checkpointer = checkpointer
         self.agent = None
         self.mcp_client = None
+        self.client_factory = MCPClientFactory()
+        self.resilient_client_manager = ResilientMCPClientManager(self.client_factory)
         self._setup_mcp_client()
     
     def _setup_mcp_client(self):

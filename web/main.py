@@ -29,6 +29,7 @@ from src.infrastructure.web.dependencies import initialize_dependencies, cleanup
 from web.api.routes.chat import router as chat_router
 from web.api.routes.mcp import router as mcp_router
 from web.api.routes.agents import router as agents_router
+from web.api.routes.mcp_health import router as mcp_health_router
 
 
 @asynccontextmanager
@@ -78,6 +79,7 @@ def create_app() -> FastAPI:
     app.include_router(chat_router)
     app.include_router(mcp_router)
     app.include_router(agents_router)
+    app.include_router(mcp_health_router)
     
     return app
 
