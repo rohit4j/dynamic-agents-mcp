@@ -515,6 +515,49 @@
         .\[\&\>svg\]\:pointer-events-none > svg { pointer-events: none }
         .\[\&\>svg\]\:size-4 > svg { height: 1rem; width: 1rem }
         .\[\&\>svg\]\:shrink-0 > svg { flex-shrink: 0 }
+        
+        /* Voice Recording Styles */
+        .mic-button.recording {
+            background-color: hsl(var(--destructive)) !important;
+            color: hsl(var(--destructive-foreground)) !important;
+        }
+        .mic-button.recording svg {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        .interim-text {
+            opacity: 0.6;
+        }
+        .recording-indicator {
+            position: relative;
+        }
+        .recording-indicator::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 8px;
+            height: 8px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        /* Auto-resize textarea styles */
+        #messageInput {
+            transition: height 0.1s ease;
+            line-height: 1.5;
+        }
+        
+        /* Adjust send button position for multi-line textarea */
+        #sendBtn {
+            top: 8px !important;
+            transform: none !important;
+        }
+        
         @media (min-width: 640px) {
             .sm\:bottom-0 { bottom: 0px }
             .sm\:right-0 { right: 0px }
@@ -715,8 +758,16 @@
                                         <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
                                     </svg>
                                 </button>
+                                <button id="micBtn" class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent h-9 rounded-md px-3 text-muted-foreground hover:text-foreground mic-button">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                                        <path d="M12 1a4 4 0 0 0-4 4v7a4 4 0 0 0 8 0V5a4 4 0 0 0-4-4z"></path>
+                                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                        <line x1="12" x2="12" y1="19" y2="22"></line>
+                                        <line x1="8" x2="16" y1="22" y2="22"></line>
+                                    </svg>
+                                </button>
                                 <div class="flex-1 relative">
-                                    <input id="messageInput" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm pr-12" placeholder="Type your message..." value="">
+                                    <textarea id="messageInput" rows="1" class="flex min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm pr-12 resize-none overflow-hidden" placeholder="Type your message..."></textarea>
                                     <button id="sendBtn" class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0" disabled="">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
                                             <path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a .5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"></path>

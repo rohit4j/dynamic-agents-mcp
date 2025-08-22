@@ -4,11 +4,18 @@ let isStreaming = false;
 let chatHistory = [];
 let isFirstMessage = false;
 
+// Voice recognition state
+let recognition = null;
+let isRecording = false;
+let finalTranscript = '';
+let interimTranscript = '';
+
 // Initialize the page
 document.addEventListener('DOMContentLoaded', function() {
     initializeChat();
     setupEventListeners();
     setInitialTime();
+    initializeSpeechRecognition();
 });
 
 function initializeChat() {
@@ -27,10 +34,66 @@ function setInitialTime() {
     }
 }
 
+function initializeSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const micBtn = document.getElementById('micBtn');
+    
+    if (!SpeechRecognition) {
+        micBtn.disabled = true;
+        micBtn.title = "Speech Recognition not supported in this browser. Please use Chrome or Edge.";
+        return;
+    }
+    
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    
+    recognition.onresult = function(event) {
+        let interimText = '';
+        
+        // Process only new results from resultIndex onwards
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const transcriptPiece = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+                // Accumulate final transcript (don't reset it)
+                finalTranscript += transcriptPiece;
+            } else {
+                interimText += transcriptPiece;
+            }
+        }
+        
+        updateMessageInputWithTranscript(finalTranscript + interimText);
+    };
+    
+    recognition.onend = function() {
+        if (isRecording) {
+            console.log('Recognition ended unexpectedly—restarting...');
+            try {
+                recognition.start();
+            } catch (error) {
+                console.error('Failed to restart recognition:', error);
+                stopRecording();
+            }
+        } else {
+            stopRecording();
+        }
+    };
+    
+    recognition.onerror = function(event) {
+        console.error('Speech recognition error:', event.error);
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            alert('Microphone access denied. Please enable microphone permissions and try again.');
+        }
+        stopRecording();
+    };
+}
+
 function setupEventListeners() {
     const messageInput = document.getElementById('messageInput');
     const sendBtn = document.getElementById('sendBtn');
     const newChatBtn = document.getElementById('newChatBtn');
+    const micBtn = document.getElementById('micBtn');
     
     // Send message on Enter key
     messageInput.addEventListener('keypress', function(e) {
@@ -46,10 +109,14 @@ function setupEventListeners() {
     // New chat button
     newChatBtn.addEventListener('click', createNewChat);
 
-    // Update send button state based on input
+    // Microphone button
+    micBtn.addEventListener('click', toggleRecording);
+
+    // Update send button state based on input and auto-resize
     messageInput.addEventListener('input', function() {
         const hasText = messageInput.value.trim().length > 0;
         sendBtn.disabled = !hasText || isStreaming;
+        autoResizeTextarea(messageInput);
     });
 
     // Search functionality
@@ -431,8 +498,14 @@ async function sendMessage() {
     
     if (!message || isStreaming) return;
 
+    // Auto-stop recording if active
+    if (isRecording) {
+        stopRecording();
+    }
+
     // Clear input and disable send button
     messageInput.value = '';
+    autoResizeTextarea(messageInput); // Reset textarea height
     updateSendButton(true);
     isStreaming = true;
 
@@ -732,7 +805,96 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Voice Recording Functions
+function toggleRecording() {
+    if (!recognition) {
+        alert('Speech recognition is not available. Please use Chrome or Edge.');
+        return;
+    }
+    
+    if (!isRecording) {
+        startRecording();
+    } else {
+        stopRecording();
+    }
+}
+
+function startRecording() {
+    if (isRecording) return;
+    
+    finalTranscript = '';
+    interimTranscript = '';
+    isRecording = true;
+    
+    try {
+        recognition.start();
+        updateRecordingUI(true);
+        console.log('Voice recording started');
+    } catch (error) {
+        console.error('Failed to start recording:', error);
+        stopRecording();
+    }
+}
+
+function stopRecording() {
+    if (!isRecording) return;
+    
+    isRecording = false;
+    
+    if (recognition) {
+        try {
+            recognition.stop();
+        } catch (error) {
+            console.error('Error stopping recognition:', error);
+        }
+    }
+    
+    updateRecordingUI(false);
+    console.log('Voice recording stopped');
+}
+
+function updateRecordingUI(recording) {
+    const micBtn = document.getElementById('micBtn');
+    
+    if (recording) {
+        micBtn.classList.add('recording', 'recording-indicator');
+        micBtn.title = 'Click to stop recording';
+    } else {
+        micBtn.classList.remove('recording', 'recording-indicator');
+        micBtn.title = 'Click to start voice input';
+    }
+}
+
+function updateMessageInputWithTranscript(transcript) {
+    const messageInput = document.getElementById('messageInput');
+    messageInput.value = transcript;
+    
+    // Trigger input event to update send button state and auto-resize
+    messageInput.dispatchEvent(new Event('input'));
+}
+
+function autoResizeTextarea(textarea) {
+    // Reset height to auto to get the correct scrollHeight
+    textarea.style.height = 'auto';
+    
+    // Calculate the new height (min 40px, max 120px for ~4 lines)
+    const minHeight = 40; // min-h-10 = 40px
+    const maxHeight = 120; // ~4 lines max
+    const newHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
+    
+    textarea.style.height = newHeight + 'px';
+    
+    // If content exceeds max height, enable scrolling
+    if (textarea.scrollHeight > maxHeight) {
+        textarea.style.overflowY = 'auto';
+    } else {
+        textarea.style.overflowY = 'hidden';
+    }
+}
+
 // Cleanup on page unload
 window.addEventListener('beforeunload', function() {
-    // Cleanup if needed
+    if (isRecording) {
+        stopRecording();
+    }
 });
